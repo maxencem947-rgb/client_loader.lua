@@ -1,6 +1,11 @@
 local menuOuvert = false
 local indexSelectionne = 1
 local indexCategorieSelectionnee = nil
+local joueursSelectionnes = {}  -- Liste des joueurs sélectionnés
+local rayon = 150  -- Rayon de détection des joueurs
+local joueursProches = {}  -- Liste des joueurs à proximité
+
+-- Liste des catégories
 local itemsMenu = {
     {name = "Player", options = {"Self", "Online", "Visual", "Combat", "Vehicle", "Miscellaneous", "Settings"}},
     {name = "Online", options = {"Option1", "Option2", "Option3"}},
@@ -41,86 +46,87 @@ local function dessinerBarreTitre()
     -- Dessiner la barre de titre en rouge
     dessinerCadre(posX, posY - 0.08, largeurMenu, 0.08, 255, 0, 0, 255)
     
-    -- Afficher "DERVONn" en gros et stylisé
+    -- Afficher "DERVONn" en gros et stylisé (police par défaut de FiveM : Roboto)
+    SetTextFont(4)  -- Utilisation de la police Roboto
     dessinerTexte(posX, posY - 0.075, "DERVONn", 1.0, 1.0, 255, 255, 255, 255)  -- Texte en grand
     dessinerTexte(posX, posY - 0.03, "Main Menu", 0.4, 0.4, 255, 255, 255, 255)
 end
 
--- Dessiner les catégories principales
-local function dessinerMenuPrincipal()
+-- Fonction pour récupérer les joueurs à proximité dans un rayon de 150 unités
+local function getJoueursProches()
+    joueursProches = {}
+    local joueurActuel = PlayerPedId()  -- ID du joueur actuel
+    local x, y, z = table.unpack(GetEntityCoords(joueurActuel))  -- Position du joueur actuel
+
+    -- Parcours des joueurs et ajout à la liste s'ils sont dans le rayon de 150 unités
+    for _, joueur in ipairs(GetActivePlayers()) do
+        if joueur ~= joueurActuel then
+            local ped = GetPlayerPed(joueur)
+            local px, py, pz = table.unpack(GetEntityCoords(ped))
+            local distance = Vdist(x, y, z, px, py, pz)
+            if distance <= rayon then
+                table.insert(joueursProches, {id = joueur, name = GetPlayerName(joueur), distance = distance})
+            end
+        end
+    end
+end
+
+-- Fonction pour dessiner la liste des joueurs à proximité dans le menu "Online"
+local function dessinerListeJoueurs()
+    getJoueursProches()  -- Récupérer les joueurs à proximité
+
     dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)  -- Fond du menu
     dessinerBarreTitre()
 
-    -- Dessiner les catégories principales avec bordure rouge
-    for i, category in ipairs(itemsMenu) do
-        local couleur = (i == indexSelectionne) and {r = 0, g = 255, b = 0} or {r = 255, g = 255, b = 255}
-        dessinerTexte(posX, posY + 0.05 + i * 0.05, category.name, 0.4, 0.4, couleur.r, couleur.g, couleur.b, 255)
-        
-        -- Dessiner la flèche pour indiquer qu'il y a un sous-menu
-        if i == indexSelectionne then
-            dessinerTexte(posX + 0.18, posY + 0.05 + i * 0.05, ">", 0.4, 0.4, 255, 255, 255, 255)
+    -- Afficher la liste des joueurs proches
+    for i, joueur in ipairs(joueursProches) do
+        local couleur = (joueursSelectionnes[joueur.id]) and {r = 255, g = 0, b = 0} or {r = 255, g = 255, b = 255}  -- Rouge si sélectionné, sinon blanc
+        dessinerTexte(posX, posY + 0.05 + i * 0.05, joueur.name, 0.4, 0.4, couleur.r, couleur.g, couleur.b, 255)
+
+        -- Dessiner la distance du joueur
+        dessinerTexte(posX + 0.18, posY + 0.05 + i * 0.05, string.format("Distance: %.1f", joueur.distance), 0.3, 0.3, 255, 255, 255, 255)
+    end
+end
+
+-- Fonction pour gérer la sélection/désélection des joueurs
+local function gererSelectionJoueur()
+    if IsControlJustPressed(0, 172) then  -- Flèche haut
+        indexSelectionne = indexSelectionne - 1
+        if indexSelectionne < 1 then indexSelectionne = #joueursProches end
+    end
+    if IsControlJustPressed(0, 173) then  -- Flèche bas
+        indexSelectionne = indexSelectionne + 1
+        if indexSelectionne > #joueursProches then indexSelectionne = 1 end
+    end
+
+    -- Sélectionner ou désélectionner un joueur
+    if IsControlJustPressed(0, 191) then  -- Entrée
+        local joueurSelectionne = joueursProches[indexSelectionne]
+        if joueurSelectionne then
+            -- Inverser la sélection
+            joueursSelectionnes[joueurSelectionne.id] = not joueursSelectionnes[joueurSelectionne.id]
         end
     end
 end
 
--- Dessiner les options du sous-menu
-local function dessinerSousMenu()
-    local category = itemsMenu[indexCategorieSelectionnee]
-    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)  -- Fond du sous-menu
-    dessinerBarreTitre()
-
-    -- Dessiner les options du sous-menu
-    for i, option in ipairs(category.options) do
-        local couleur = (i == indexSelectionne) and {r = 0, g = 255, b = 0} or {r = 255, g = 255, b = 255}
-        dessinerTexte(posX, posY + 0.05 + i * 0.05, option, 0.4, 0.4, couleur.r, couleur.g, couleur.b, 255)
-    end
-end
-
--- Fonction pour afficher la demande de sélection de touche
-local function afficherDemandeTouche()
-    dessinerTexte(0.25, 0.5, "Appuyez sur une touche pour ouvrir/fermer le menu", 0.5, 0.5, 255, 255, 255, 255)
-end
-
--- Déplacement du menu avec la souris
-local function deplacerMenu()
-    if IsControlPressed(0, 25) then -- Clic droit (contrôle de souris)
-        local sourisX, sourisY = GetCursorPosition()
-        posX = sourisX / GetScreenWidth()
-        posY = sourisY / GetScreenHeight()
-    end
-end
-
--- Fonction principale pour gérer les entrées
+-- Fonction principale de gestion des entrées
 local function gererEntrees()
-    if indexCategorieSelectionnee then
-        -- Navigation dans le sous-menu
-        if IsControlJustPressed(0, 172) then -- Flèche haut
-            indexSelectionne = indexSelectionne - 1
-            if indexSelectionne < 1 then indexSelectionne = #itemsMenu[indexCategorieSelectionnee].options end
-        end
-        if IsControlJustPressed(0, 173) then -- Flèche bas
-            indexSelectionne = indexSelectionne + 1
-            if indexSelectionne > #itemsMenu[indexCategorieSelectionnee].options then indexSelectionne = 1 end
-        end
-
-        -- Retour au menu principal avec la touche Supprimer
-        if IsControlJustPressed(0, 178) then -- Touche Supprimer (Delete)
-            indexCategorieSelectionnee = nil
-            indexSelectionne = 1
-        end
+    if indexCategorieSelectionnee == 2 then  -- Si on est sur la catégorie "Online"
+        -- Gérer la sélection des joueurs
+        gererSelectionJoueur()
     else
         -- Navigation dans le menu principal
-        if IsControlJustPressed(0, 172) then -- Flèche haut
+        if IsControlJustPressed(0, 172) then  -- Flèche haut
             indexSelectionne = indexSelectionne - 1
             if indexSelectionne < 1 then indexSelectionne = #itemsMenu end
         end
-        if IsControlJustPressed(0, 173) then -- Flèche bas
+        if IsControlJustPressed(0, 173) then  -- Flèche bas
             indexSelectionne = indexSelectionne + 1
             if indexSelectionne > #itemsMenu then indexSelectionne = 1 end
         end
 
         -- Sélectionner une catégorie
-        if IsControlJustPressed(0, 191) then -- Entrée
+        if IsControlJustPressed(0, 191) then  -- Entrée
             indexCategorieSelectionnee = indexSelectionne
             indexSelectionne = 1
         end
@@ -159,8 +165,8 @@ Citizen.CreateThread(function()
                 gererEntrees()
 
                 -- Afficher le menu ou le sous-menu
-                if indexCategorieSelectionnee then
-                    dessinerSousMenu()
+                if indexCategorieSelectionnee == 2 then
+                    dessinerListeJoueurs()
                 else
                     dessinerMenuPrincipal()
                 end
@@ -168,6 +174,7 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
 
 
 
