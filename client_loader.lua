@@ -1,197 +1,201 @@
-local menuOuvert = false
-local indexSelectionne = 1
-local indexCategorieSelectionnee = nil
-local joueursSelectionnes = {}  -- Liste des joueurs sélectionnés
-local rayon = 150  -- Rayon de détection des joueurs
-local joueursProches = {}  -- Liste des joueurs à proximité
-local toucheMenu = nil  -- Touche assignée pour ouvrir/fermer le menu
-local enAttenteTouche = true  -- Flag pour savoir si on attend la sélection de la touche
+-- ========================
+-- MENU PRINCIPAL (COMPLET)
+-- ========================
 
--- Liste des catégories
-local itemsMenu = {
-    {name = "Player", options = {"Self", "Online", "Visual", "Combat", "Vehicle", "Miscellaneous", "Settings"}},
-    {name = "Online", options = {"Option1", "Option2", "Option3"}},
-    {name = "Visual", options = {"Option1", "Option2", "Option3"}},
-    {name = "Combat", options = {"Option1", "Option2", "Option3"}},
-    {name = "Vehicle", options = {"Option1", "Option2", "Option3"}},
-    {name = "Miscellaneous", options = {"Option1", "Option2", "Option3"}},
-    {name = "Settings", options = {"Option1", "Option2", "Option3"}}
+-- Menu State
+local menuOpen = false
+local selectedIndex = 1
+local currentSubMenu = nil
+
+-- Main Menu Items
+local menuItems = {
+  { label = "Player", icon = ">" },
+  { label = "Online", icon = ">" },
+  { label = "Visual", icon = ">" },
+  { label = "Combat", icon = ">" },
+  { label = "Vehicle", icon = ">" },
+  { label = "Miscellaneous", icon = ">" },
+  { label = "Settings", icon = ">" }
 }
 
--- Position du menu à l'écran
-local posX, posY = 0.1, 0.5
-local largeurMenu, hauteurMenu = 0.25, 0.3
+-- Sub‑menus
+local subMenus = {
+  Visual = {
+    { label = "ESP Players", action = "visual:esp_players" },
+    { label = "ESP Vehicles", action = "visual:esp_vehicles" },
+    { label = "Skeleton Players", action = "visual:skeleton_players" },
+    { label = "Name Tags", action = "visual:nametags" },
+    { label = "Distance Info", action = "visual:distance_info" },
+    { label = "Back", action = "back" }
+  },
+  -- tu peux ajouter d'autres submenus ici (Par exemple Online, Combat, etc.)
+}
 
--- Fonction pour dessiner un cadre générique
-local function dessinerCadre(x, y, largeur, hauteur, r, g, b, a)
-    DrawRect(x, y, largeur, hauteur, r, g, b, a)
+-- COLORS
+local colors = {
+  red = { r = 220, g = 20, b = 20, a = 255 },
+  darkRed = { r = 139, g = 0, b = 0, a = 255 },
+  black = { r = 0, g = 0, b = 0, a = 200 },
+  white = { r = 255, g = 255, b = 255, a = 255 },
+  gray = { r = 50, g = 50, b = 50, a = 255 },
+}
+
+-- Menu Position
+local menuConfig = {
+  startX = 0.18,
+  startY = 0.15,
+  width = 0.25,
+  itemHeight = 0.05,
+  headerHeight = 0.08
+}
+
+-- DRAW TEXT
+local function drawText(text, x, y, scale, r, g, b, a)
+  SetTextFont(4)
+  SetTextScale(scale, scale)
+  SetTextColour(r, g, b, a)
+  SetTextDropshadow(0, 0, 0, 0, 255)
+  BeginTextCommandDisplayText("STRING")
+  AddTextComponentString(text)
+  DrawText(x, y)
 end
 
--- Fonction pour dessiner le texte avec ombre et couleur
-local function dessinerTexte(x, y, texte, tailleX, tailleY, r, g, b, a)
-    SetTextFont(0)
-    SetTextProportional(1)
-    SetTextScale(tailleX, tailleY)
-    SetTextColour(0, 0, 0, 255)  -- Ombre noire pour le texte
-    SetTextEntry("STRING")
-    AddTextComponentString(texte)
-    DrawText(x + 0.02, y + 0.02)
-    SetTextColour(r, g, b, a)  -- Texte principal
-    DrawText(x, y)
+-- DRAW RECT
+local function drawRect(x, y, width, height, r, g, b, a)
+  DrawRect(x + width / 2, y + height / 2, width, height, r, g, b, a)
 end
 
--- Dessiner la barre de titre avec "DERVONn" en gros et stylisé
-local function dessinerBarreTitre()
-    -- Dessiner la barre de titre en rouge
-    dessinerCadre(posX, posY - 0.08, largeurMenu, 0.08, 255, 0, 0, 255)
-    
-    -- Afficher "DERVONn" en gros et stylisé (police par défaut de FiveM : Roboto)
-    SetTextFont(4)  -- Utilisation de la police Roboto
-    dessinerTexte(posX, posY - 0.075, "DERVONn", 1.0, 1.0, 255, 255, 255, 255)  -- Texte en grand
-    dessinerTexte(posX, posY - 0.03, "Main Menu", 0.4, 0.4, 255, 255, 255, 255)
-end
+-- DRAW MENU
+local function drawMenu()
+  if not menuOpen then return end
 
--- Fonction pour récupérer les joueurs à proximité dans un rayon de 150 unités
-local function getJoueursProches()
-    joueursProches = {}
-    local joueurActuel = PlayerPedId()  -- ID du joueur actuel
-    local x, y, z = table.unpack(GetEntityCoords(joueurActuel))  -- Position du joueur actuel
+  local x = menuConfig.startX
+  local y = menuConfig.startY
+  local w = menuConfig.width
+  local hItem = menuConfig.itemHeight
+  local hHeader = menuConfig.headerHeight
 
-    -- Parcours des joueurs et ajout à la liste s'ils sont dans le rayon de 150 unités
-    for _, joueur in ipairs(GetActivePlayers()) do
-        if joueur ~= joueurActuel then
-            local ped = GetPlayerPed(joueur)
-            local px, py, pz = table.unpack(GetEntityCoords(ped))
-            local distance = Vdist(x, y, z, px, py, pz)
-            if distance <= rayon then
-                table.insert(joueursProches, {id = joueur, name = GetPlayerName(joueur), distance = distance})
-            end
-        end
+  -- Header BG
+  drawRect(x, y, w, hHeader, colors.darkRed.r, colors.darkRed.g, colors.darkRed.b, colors.darkRed.a)
+  drawText(currentSubMenu and "["..currentSubMenu.."]" or "Main Menu", x + 0.02, y + 0.015, 0.4, colors.white.r, colors.white.g, colors.white.b, colors.white.a)
+
+  if currentSubMenu then
+    -- Draw SubMenu
+    local items = subMenus[currentSubMenu]
+    for i, v in ipairs(items) do
+      local itemY = y + hHeader + (i - 1) * hItem
+      if i == selectedIndex then
+        drawRect(x, itemY, w, hItem, colors.red.r, colors.red.g, colors.red.b, colors.red.a)
+      else
+        drawRect(x, itemY, w, hItem, colors.black.r, colors.black.g, colors.black.b, colors.black.a)
+      end
+      drawText(v.label, x + 0.02, itemY + 0.012, 0.35, colors.white.r, colors.white.g, colors.white.b, colors.white.a)
     end
+  else
+    -- Draw Main Menu
+    for i, v in ipairs(menuItems) do
+      local itemY = y + hHeader + (i - 1) * hItem
+      if i == selectedIndex then
+        drawRect(x, itemY, w, hItem, colors.red.r, colors.red.g, colors.red.b, colors.red.a)
+      else
+        drawRect(x, itemY, w, hItem, colors.black.r, colors.black.g, colors.black.b, colors.black.a)
+      end
+
+      drawText(v.label, x + 0.02, itemY + 0.012, 0.35, colors.white.r, colors.white.g, colors.white.b, colors.white.a)
+      drawText(v.icon, x + w - 0.03, itemY + 0.012, 0.35, colors.white.r, colors.white.g, colors.white.b, colors.white.a)
+    end
+  end
 end
 
--- Fonction pour dessiner la liste des joueurs à proximité dans le menu "Online"
-local function dessinerListeJoueurs()
-    getJoueursProches()  -- Récupérer les joueurs à proximité
-
-    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)  -- Fond du menu
-    dessinerBarreTitre()
-
-    -- Afficher la liste des joueurs proches
-    for i, joueur in ipairs(joueursProches) do
-        local couleur = (joueursSelectionnes[joueur.id]) and {r = 255, g = 0, b = 0} or {r = 255, g = 255, b = 255}  -- Rouge si sélectionné, sinon blanc
-        dessinerTexte(posX, posY + 0.05 + i * 0.05, joueur.name, 0.4, 0.4, couleur.r, couleur.g, couleur.b, 255)
-
-        -- Dessiner la distance du joueur
-        dessinerTexte(posX + 0.18, posY + 0.05 + i * 0.05, string.format("Distance: %.1f", joueur.distance), 0.3, 0.3, 255, 255, 255, 255)
+-- HANDLE INPUT
+local function handleMenuInput()
+  if IsControlJustReleased(0, 188) then -- UP
+    selectedIndex = selectedIndex - 1
+    if selectedIndex < 1 then
+      selectedIndex = currentSubMenu and #subMenus[currentSubMenu] or #menuItems
     end
-end
-
--- Fonction pour gérer la sélection/désélection des joueurs
-local function gererSelectionJoueur()
-    if IsControlJustPressed(0, 172) then  -- Flèche haut
-        indexSelectionne = indexSelectionne - 1
-        if indexSelectionne < 1 then indexSelectionne = #joueursProches end
+  elseif IsControlJustReleased(0, 187) then -- DOWN
+    selectedIndex = selectedIndex + 1
+    if selectedIndex > (currentSubMenu and #subMenus[currentSubMenu] or #menuItems) then
+      selectedIndex = 1
     end
-    if IsControlJustPressed(0, 173) then  -- Flèche bas
-        indexSelectionne = indexSelectionne + 1
-        if indexSelectionne > #joueursProches then indexSelectionne = 1 end
-    end
-
-    -- Sélectionner ou désélectionner un joueur
-    if IsControlJustPressed(0, 191) then  -- Entrée
-        local joueurSelectionne = joueursProches[indexSelectionne]
-        if joueurSelectionne then
-            -- Inverser la sélection
-            joueursSelectionnes[joueurSelectionne.id] = not joueursSelectionnes[joueurSelectionne.id]
-        end
-    end
-end
-
--- Afficher la demande de sélection de touche pour ouvrir le menu
-local function afficherDemandeTouche()
-    -- Si aucune touche n'est assignée, afficher un message demandant à l'utilisateur de sélectionner une touche
-    if enAttenteTouche then
-        dessinerCadre(0.5, 0.5, 0.25, 0.08, 0, 0, 0, 150)
-        dessinerTexte(0.5, 0.5, "Appuyez sur une touche pour ouvrir/fermer le menu", 0.5, 0.5, 255, 255, 255, 255)
-    elseif toucheMenu then
-        -- Si une touche a été sélectionnée, afficher la touche assignée
-        dessinerCadre(0.5, 0.5, 0.25, 0.08, 0, 0, 0, 150)
-        dessinerTexte(0.5, 0.5, "Touche assignée: " .. GetControlInstructionalButton(0, toucheMenu, true), 0.5, 0.5, 255, 255, 255, 255)
-    end
-end
-
--- Déplacement du menu avec la souris
-local function deplacerMenu()
-    if IsControlPressed(0, 25) then -- Clic droit (contrôle de souris)
-        local sourisX, sourisY = GetCursorPosition()
-        posX = sourisX / GetScreenWidth()
-        posY = sourisY / GetScreenHeight()
-    end
-end
-
--- Fonction principale pour gérer les entrées
-local function gererEntrees()
-    if indexCategorieSelectionnee == 2 then  -- Si on est sur la catégorie "Online"
-        -- Gérer la sélection des joueurs
-        gererSelectionJoueur()
+  elseif IsControlJustReleased(0, 191) then -- ENTER
+    if currentSubMenu then
+      local action = subMenus[currentSubMenu][selectedIndex].action
+      if action == "back" then
+        -- back to main menu
+        currentSubMenu = nil
+        selectedIndex = 1
+      else
+        -- Trigger event for action
+        TriggerEvent(action)
+      end
     else
-        -- Navigation dans le menu principal
-        if IsControlJustPressed(0, 172) then  -- Flèche haut
-            indexSelectionne = indexSelectionne - 1
-            if indexSelectionne < 1 then indexSelectionne = #itemsMenu end
-        end
-        if IsControlJustPressed(0, 173) then  -- Flèche bas
-            indexSelectionne = indexSelectionne + 1
-            if indexSelectionne > #itemsMenu then indexSelectionne = 1 end
-        end
-
-        -- Sélectionner une catégorie
-        if IsControlJustPressed(0, 191) then  -- Entrée
-            indexCategorieSelectionnee = indexSelectionne
-            indexSelectionne = 1
-        end
+      local label = menuItems[selectedIndex].label
+      if subMenus[label] then
+        currentSubMenu = label
+        selectedIndex = 1
+      else
+        TriggerEvent("menu:selected", label)
+      end
     end
+  end
 end
 
--- Boucle principale
+-- TOGGLE MENU (Touche + Commande)
+function ToggleMenu()
+  menuOpen = not menuOpen
+  selectedIndex = 1
+  if not menuOpen then
+    currentSubMenu = nil
+  end
+end
+
+-- OPEN MENU WITH F1
 Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(0)
-
-        -- Si nous attendons la sélection de la touche
-        if enAttenteTouche then
-            afficherDemandeTouche()
-
-            -- Détecter la pression d'une touche pour définir la touche d'ouverture/fermeture
-            for i = 1, 255 do
-                if IsControlJustPressed(0, i) then
-                    toucheMenu = i
-                    enAttenteTouche = false
-                    print("Touche sélectionnée : " .. i)
-                    break
-                end
-            end
-        else
-            -- Attendre la pression de la touche pour ouvrir/fermer le menu
-            if IsControlJustPressed(0, toucheMenu) then
-                menuOuvert = not menuOuvert
-            end
-
-            if menuOuvert then
-                -- Déplacer le menu avec la souris
-                deplacerMenu()
-
-                -- Gérer les entrées utilisateur
-                gererEntrees()
-
-                -- Afficher le menu ou le sous-menu
-                if indexCategorieSelectionnee == 2 then
-                    dessinerListeJoueurs()
-                else
-                    dessinerMenuPrincipal()
-                end
-            end
-        end
+  while true do
+    Citizen.Wait(0)
+    if IsControlJustReleased(0, 288) then -- F1
+      ToggleMenu()
     end
+    if menuOpen then
+      handleMenuInput()
+    end
+    drawMenu()
+  end
 end)
+
+-- CHAT COMMAND
+RegisterCommand('menu', function()
+  ToggleMenu()
+end, false)
+
+-- MENU SELECTION EVENT
+RegisterNetEvent('menu:selected')
+AddEventHandler('menu:selected', function(itemLabel)
+  print("Selected: " .. itemLabel)
+end)
+
+-- ===== EXEMPLE D’ACTIONS POUR VISUAL =====
+
+RegisterNetEvent('visual:esp_players', function()
+  print("🔎 ESP Players toggled")
+  -- Ajoute ta logique ESP ici
+end)
+
+RegisterNetEvent('visual:esp_vehicles', function()
+  print("🚗 ESP Vehicles toggled")
+end)
+
+RegisterNetEvent('visual:skeleton_players', function()
+  print("💀 Skeleton Players toggled")
+end)
+
+RegisterNetEvent('visual:nametags', function()
+  print("🏷️ Name Tags toggled")
+end)
+
+RegisterNetEvent('visual:distance_info', function()
+  print("📏 Distance Info toggled")
+end)
+
