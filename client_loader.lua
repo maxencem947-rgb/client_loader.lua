@@ -1,66 +1,60 @@
--- Configuration des touches
-local toggleMenuKey = "F1"  -- touche pour ouvrir/fermer le menu
-local selectKey = "ENTER"   -- touche pour valider
-local upKey = "UP"          -- touche pour monter
-local downKey = "DOWN"      -- touche pour descendre
-
--- Menu
-local menuItems = {"Self", "Online", "Serveur", "Combat", "Paramètre"}
 local menuOpen = false
 local selectedIndex = 1
+local menuItems = {"Self", "Online", "Serveur", "Combat", "Paramètre"}
 
--- Fonction pour afficher le menu
+-- Touche pour ouvrir/fermer le menu (F1 = 288)
+local toggleMenuKey = 288
+
+-- Fonction pour dessiner le menu
 local function drawMenu()
-    print("\n===== MENU =====")
+    -- Rectangle de fond
+    DrawRect(0.1, 0.5, 0.15, 0.2, 0, 0, 0, 150)
+    
     for i, item in ipairs(menuItems) do
+        local color = {r=255, g=255, b=255}
         if i == selectedIndex then
-            print("> " .. item)
-        else
-            print("  " .. item)
+            color = {r=0, g=255, b=0} -- vert sélection
         end
+        SetTextFont(0)
+        SetTextProportional(1)
+        SetTextScale(0.4, 0.4)
+        SetTextColour(color.r, color.g, color.b, 255)
+        SetTextEntry("STRING")
+        AddTextComponentString(item)
+        DrawText(0.03, 0.45 + i * 0.03)
     end
 end
 
--- Fonction pour gérer l’input
-local function handleInput()
+-- Boucle principale
+Citizen.CreateThread(function()
     while true do
-        if Susano.IsKeyPressed(toggleMenuKey) then
+        Citizen.Wait(0)
+
+        -- Attendre la touche pour ouvrir/fermer
+        if IsControlJustPressed(0, toggleMenuKey) then
             menuOpen = not menuOpen
-            if menuOpen then
-                print("Menu ouvert !")
-                drawMenu()
-            else
-                print("Menu fermé !")
-            end
-            Susano.Wait(200) -- anti-rebond
         end
 
         if menuOpen then
-            if Susano.IsKeyPressed(upKey) then
+            -- Navigation Haut/Bas
+            if IsControlJustPressed(0, 172) then -- flèche haut
                 selectedIndex = selectedIndex - 1
                 if selectedIndex < 1 then selectedIndex = #menuItems end
-                drawMenu()
-                Susano.Wait(150)
             end
-
-            if Susano.IsKeyPressed(downKey) then
+            if IsControlJustPressed(0, 173) then -- flèche bas
                 selectedIndex = selectedIndex + 1
                 if selectedIndex > #menuItems then selectedIndex = 1 end
-                drawMenu()
-                Susano.Wait(150)
             end
 
-            if Susano.IsKeyPressed(selectKey) then
-                print("Vous avez sélectionné : " .. menuItems[selectedIndex])
-                -- Ici tu peux appeler la fonction correspondante
-                Susano.Wait(200)
+            -- Valider
+            if IsControlJustPressed(0, 191) then -- Entrée
+                print("Option sélectionnée : " .. menuItems[selectedIndex])
+                -- Ici tu peux ajouter les actions selon l’option
             end
+
+            -- Afficher le menu
+            drawMenu()
         end
-
-        Susano.Wait(10) -- boucle principale
     end
-end
-
--- Lancer le menu
-handleInput()
+end)
 
