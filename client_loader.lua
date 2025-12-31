@@ -4,6 +4,8 @@ local indexCategorieSelectionnee = nil
 local joueursSelectionnes = {}  -- Liste des joueurs sélectionnés
 local rayon = 150  -- Rayon de détection des joueurs
 local joueursProches = {}  -- Liste des joueurs à proximité
+local toucheMenu = 288  -- Touche par défaut pour ouvrir/fermer le menu
+local enAttenteTouche = true
 
 -- Liste des catégories
 local itemsMenu = {
@@ -15,9 +17,6 @@ local itemsMenu = {
     {name = "Miscellaneous", options = {"Option1", "Option2", "Option3"}},
     {name = "Settings", options = {"Option1", "Option2", "Option3"}}
 }
-
--- Touche par défaut pour ouvrir/fermer le menu (F1 = 288)
-local toucheMenu = 288
 
 -- Position du menu à l'écran
 local posX, posY = 0.1, 0.5
