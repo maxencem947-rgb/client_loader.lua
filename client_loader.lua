@@ -4,8 +4,8 @@ local indexCategorieSelectionnee = nil
 local joueursSelectionnes = {}  -- Liste des joueurs sélectionnés
 local rayon = 150  -- Rayon de détection des joueurs
 local joueursProches = {}  -- Liste des joueurs à proximité
-local toucheMenu = 288  -- Touche par défaut pour ouvrir/fermer le menu
-local enAttenteTouche = true
+local toucheMenu = nil  -- Touche assignée pour ouvrir/fermer le menu
+local enAttenteTouche = true  -- Flag pour savoir si on attend la sélection de la touche
 
 -- Liste des catégories
 local itemsMenu = {
@@ -110,9 +110,15 @@ end
 
 -- Afficher la demande de sélection de touche pour ouvrir le menu
 local function afficherDemandeTouche()
-    -- Dessiner un rectangle pour indiquer à l'utilisateur de sélectionner une touche
-    dessinerCadre(0.5, 0.5, 0.25, 0.08, 0, 0, 0, 150)
-    dessinerTexte(0.5, 0.5, "Appuyez sur une touche pour ouvrir/fermer le menu", 0.5, 0.5, 255, 255, 255, 255)
+    -- Si aucune touche n'est assignée, afficher un message demandant à l'utilisateur de sélectionner une touche
+    if enAttenteTouche then
+        dessinerCadre(0.5, 0.5, 0.25, 0.08, 0, 0, 0, 150)
+        dessinerTexte(0.5, 0.5, "Appuyez sur une touche pour ouvrir/fermer le menu", 0.5, 0.5, 255, 255, 255, 255)
+    elseif toucheMenu then
+        -- Si une touche a été sélectionnée, afficher la touche assignée
+        dessinerCadre(0.5, 0.5, 0.25, 0.08, 0, 0, 0, 150)
+        dessinerTexte(0.5, 0.5, "Touche assignée: " .. GetControlInstructionalButton(0, toucheMenu, true), 0.5, 0.5, 255, 255, 255, 255)
+    end
 end
 
 -- Déplacement du menu avec la souris
@@ -189,12 +195,4 @@ Citizen.CreateThread(function()
         end
     end
 end)
-
-
-
-
-
-
-
-
 
