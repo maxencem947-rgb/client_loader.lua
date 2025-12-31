@@ -16,10 +16,7 @@ local toucheMenu = 288
 
 -- Position du menu à l'écran
 local posX, posY = 0.1, 0.5
-local largeurMenu, hauteurMenu = 0.2, 0.3
-
--- Variable pour détecter l'entrée de l'utilisateur pour choisir la touche d'ouverture/fermeture du menu
-local enAttenteTouche = true
+local largeurMenu, hauteurMenu = 0.25, 0.3
 
 -- Fonction pour dessiner un cadre générique
 local function dessinerCadre(x, y, largeur, hauteur, r, g, b, a)
@@ -39,27 +36,36 @@ local function dessinerTexte(x, y, texte, tailleX, tailleY, r, g, b, a)
     DrawText(x, y)
 end
 
--- Fonction pour dessiner le menu principal
+-- Dessiner la barre de titre (identique pour tous les menus)
+local function dessinerBarreTitre()
+    -- Dessiner la barre de titre en rouge
+    dessinerCadre(posX, posY - 0.08, largeurMenu, 0.08, 255, 0, 0, 255)
+    dessinerTexte(posX, posY - 0.075, "Bnz'", 0.6, 0.6, 255, 255, 255, 255)
+    dessinerTexte(posX, posY - 0.03, "Main Menu", 0.4, 0.4, 255, 255, 255, 255)
+end
+
+-- Dessiner les catégories principales
 local function dessinerMenuPrincipal()
-    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)
-    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 255, 0, 0, 255) -- Bordure rouge
+    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)  -- Fond du menu
+    dessinerBarreTitre()
 
-    dessinerTexte(posX, posY - 0.07, "Bnz'", 0.6, 0.6, 255, 0, 0, 255)
-
-    -- Dessiner les catégories principales
+    -- Dessiner les catégories principales avec bordure rouge
     for i, category in ipairs(itemsMenu) do
         local couleur = (i == indexSelectionne) and {r = 0, g = 255, b = 0} or {r = 255, g = 255, b = 255}
         dessinerTexte(posX, posY + 0.05 + i * 0.05, category.name, 0.4, 0.4, couleur.r, couleur.g, couleur.b, 255)
+        
+        -- Dessiner la flèche pour indiquer qu'il y a un sous-menu
+        if i == indexSelectionne then
+            dessinerTexte(posX + 0.18, posY + 0.05 + i * 0.05, ">", 0.4, 0.4, 255, 255, 255, 255)
+        end
     end
 end
 
--- Fonction pour dessiner le sous-menu avec les options
+-- Dessiner les options du sous-menu
 local function dessinerSousMenu()
     local category = itemsMenu[indexCategorieSelectionnee]
-    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)
-    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 255, 0, 0, 255) -- Bordure rouge
-
-    dessinerTexte(posX, posY - 0.07, category.name, 0.6, 0.6, 255, 0, 0, 255)
+    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)  -- Fond du sous-menu
+    dessinerBarreTitre()
 
     -- Dessiner les options du sous-menu
     for i, option in ipairs(category.options) do
@@ -73,7 +79,7 @@ local function afficherDemandeTouche()
     dessinerTexte(0.25, 0.5, "Appuyez sur une touche pour ouvrir/fermer le menu", 0.5, 0.5, 255, 255, 255, 255)
 end
 
--- Fonction pour déplacer le menu
+-- Déplacement du menu avec la souris
 local function deplacerMenu()
     if IsControlPressed(0, 25) then -- Clic droit (contrôle de souris)
         local sourisX, sourisY = GetCursorPosition()
@@ -82,10 +88,10 @@ local function deplacerMenu()
     end
 end
 
--- Fonction principale de gestion des entrées
+-- Fonction principale pour gérer les entrées
 local function gererEntrees()
     if indexCategorieSelectionnee then
-        -- Navigation des options dans le sous-menu
+        -- Navigation dans le sous-menu
         if IsControlJustPressed(0, 172) then -- Flèche haut
             indexSelectionne = indexSelectionne - 1
             if indexSelectionne < 1 then indexSelectionne = #itemsMenu[indexCategorieSelectionnee].options end
@@ -160,6 +166,7 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
 
 
 
