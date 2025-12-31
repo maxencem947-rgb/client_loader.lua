@@ -109,7 +109,23 @@ local function gererSelectionJoueur()
     end
 end
 
--- Fonction principale de gestion des entrées
+-- Afficher la demande de sélection de touche pour ouvrir le menu
+local function afficherDemandeTouche()
+    -- Dessiner un rectangle pour indiquer à l'utilisateur de sélectionner une touche
+    dessinerCadre(0.5, 0.5, 0.25, 0.08, 0, 0, 0, 150)
+    dessinerTexte(0.5, 0.5, "Appuyez sur une touche pour ouvrir/fermer le menu", 0.5, 0.5, 255, 255, 255, 255)
+end
+
+-- Déplacement du menu avec la souris
+local function deplacerMenu()
+    if IsControlPressed(0, 25) then -- Clic droit (contrôle de souris)
+        local sourisX, sourisY = GetCursorPosition()
+        posX = sourisX / GetScreenWidth()
+        posY = sourisY / GetScreenHeight()
+    end
+end
+
+-- Fonction principale pour gérer les entrées
 local function gererEntrees()
     if indexCategorieSelectionnee == 2 then  -- Si on est sur la catégorie "Online"
         -- Gérer la sélection des joueurs
@@ -174,6 +190,8 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
+
 
 
 
