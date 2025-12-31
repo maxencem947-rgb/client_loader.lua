@@ -1,6 +1,14 @@
 local menuOuvert = false
 local indexSelectionne = 1
-local itemsMenu = {"Self", "Online", "Serveur", "Combat", "Paramètre"}
+local itemsMenu = {
+    {name = "Player", options = {"Self", "Online", "Visual", "Combat", "Vehicle", "Miscellaneous", "Settings"}},
+    {name = "Online", options = {"Option1", "Option2", "Option3"}},
+    {name = "Visual", options = {"Option1", "Option2", "Option3"}},
+    {name = "Combat", options = {"Option1", "Option2", "Option3"}},
+    {name = "Vehicle", options = {"Option1", "Option2", "Option3"}},
+    {name = "Miscellaneous", options = {"Option1", "Option2", "Option3"}},
+    {name = "Settings", options = {"Option1", "Option2", "Option3"}}
+}
 
 -- Touche par défaut pour ouvrir/fermer le menu (F1 = 288)
 local toucheMenu = 288
@@ -12,10 +20,19 @@ local toucheSelectionnee = nil
 -- Fonction pour dessiner le menu
 local function dessinerMenu()
     -- Dessiner le fond (dégradé rouge et noir similaire à l'image)
-    DrawRect(0.1, 0.5, 0.15, 0.2, 0, 0, 0, 150)
-    
-    -- Dessiner les éléments du menu
-    for i, item in ipairs(itemsMenu) do
+    DrawRect(0.1, 0.5, 0.2, 0.3, 0, 0, 0, 150)
+
+    -- Dessiner le titre du menu
+    SetTextFont(0)
+    SetTextProportional(1)
+    SetTextScale(0.6, 0.6)
+    SetTextColour(255, 0, 0, 255)  -- Texte rouge pour le titre
+    SetTextEntry("STRING")
+    AddTextComponentString("Bnz'")  -- Le titre du menu
+    DrawText(0.12, 0.42)
+
+    -- Dessiner les catégories
+    for i, category in ipairs(itemsMenu) do
         local couleur = {r = 255, g = 255, b = 255}
         if i == indexSelectionne then
             couleur = {r = 0, g = 255, b = 0} -- Vert pour l'élément sélectionné
@@ -25,8 +42,20 @@ local function dessinerMenu()
         SetTextScale(0.4, 0.4)
         SetTextColour(couleur.r, couleur.g, couleur.b, 255)
         SetTextEntry("STRING")
-        AddTextComponentString(item)
-        DrawText(0.03, 0.45 + i * 0.03)
+        AddTextComponentString(category.name)
+        DrawText(0.03, 0.45 + i * 0.05)
+
+        -- Dessiner les sous-options lorsque la catégorie est sélectionnée
+        if i == indexSelectionne then
+            local offsetY = 0.0
+            for j, option in ipairs(category.options) do
+                SetTextColour(255, 255, 255, 255)
+                SetTextEntry("STRING")
+                AddTextComponentString(option)
+                DrawText(0.08, 0.48 + i * 0.05 + offsetY)
+                offsetY = offsetY + 0.04
+            end
+        end
     end
 end
 
@@ -78,7 +107,7 @@ Citizen.CreateThread(function()
 
                 -- Valider (Entrée)
                 if IsControlJustPressed(0, 191) then -- Entrée
-                    print("Option sélectionnée : " .. itemsMenu[indexSelectionne])
+                    print("Option sélectionnée : " .. itemsMenu[indexSelectionne].name)
                     -- Actions à ajouter selon l'option choisie
                 end
 
@@ -88,5 +117,6 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
 
 
