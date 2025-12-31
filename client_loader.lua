@@ -36,11 +36,13 @@ local function dessinerTexte(x, y, texte, tailleX, tailleY, r, g, b, a)
     DrawText(x, y)
 end
 
--- Dessiner la barre de titre (identique pour tous les menus)
+-- Dessiner la barre de titre avec "DERVONn" en gros et stylisé
 local function dessinerBarreTitre()
     -- Dessiner la barre de titre en rouge
     dessinerCadre(posX, posY - 0.08, largeurMenu, 0.08, 255, 0, 0, 255)
-    dessinerTexte(posX, posY - 0.075, "Bnz'", 0.6, 0.6, 255, 255, 255, 255)
+    
+    -- Afficher "DERVONn" en gros et stylisé
+    dessinerTexte(posX, posY - 0.075, "DERVONn", 1.0, 1.0, 255, 255, 255, 255)  -- Texte en grand
     dessinerTexte(posX, posY - 0.03, "Main Menu", 0.4, 0.4, 255, 255, 255, 255)
 end
 
@@ -166,6 +168,7 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
 
 
 
