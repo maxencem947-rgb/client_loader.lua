@@ -1,5 +1,6 @@
 local menuOuvert = false
 local indexSelectionne = 1
+local indexCategorieSelectionnee = nil
 local itemsMenu = {
     {name = "Player", options = {"Self", "Online", "Visual", "Combat", "Vehicle", "Miscellaneous", "Settings"}},
     {name = "Online", options = {"Option1", "Option2", "Option3"}},
@@ -13,61 +14,109 @@ local itemsMenu = {
 -- Touche par défaut pour ouvrir/fermer le menu (F1 = 288)
 local toucheMenu = 288
 
+-- Position du menu à l'écran
+local posX, posY = 0.1, 0.5
+local largeurMenu, hauteurMenu = 0.2, 0.3
+
 -- Variable pour détecter l'entrée de l'utilisateur pour choisir la touche d'ouverture/fermeture du menu
 local enAttenteTouche = true
-local toucheSelectionnee = nil
 
--- Fonction pour dessiner le menu
-local function dessinerMenu()
-    -- Dessiner le fond (dégradé rouge et noir similaire à l'image)
-    DrawRect(0.1, 0.5, 0.2, 0.3, 0, 0, 0, 150)
+-- Fonction pour dessiner un cadre générique
+local function dessinerCadre(x, y, largeur, hauteur, r, g, b, a)
+    DrawRect(x, y, largeur, hauteur, r, g, b, a)
+end
 
-    -- Dessiner le titre du menu
+-- Fonction pour dessiner le texte avec ombre et couleur
+local function dessinerTexte(x, y, texte, tailleX, tailleY, r, g, b, a)
     SetTextFont(0)
     SetTextProportional(1)
-    SetTextScale(0.6, 0.6)
-    SetTextColour(255, 0, 0, 255)  -- Texte rouge pour le titre
+    SetTextScale(tailleX, tailleY)
+    SetTextColour(0, 0, 0, 255)  -- Ombre noire pour le texte
     SetTextEntry("STRING")
-    AddTextComponentString("Bnz'")  -- Le titre du menu
-    DrawText(0.12, 0.42)
+    AddTextComponentString(texte)
+    DrawText(x + 0.02, y + 0.02)
+    SetTextColour(r, g, b, a)  -- Texte principal
+    DrawText(x, y)
+end
 
-    -- Dessiner les catégories
+-- Fonction pour dessiner le menu principal
+local function dessinerMenuPrincipal()
+    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)
+    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 255, 0, 0, 255) -- Bordure rouge
+
+    dessinerTexte(posX, posY - 0.07, "Bnz'", 0.6, 0.6, 255, 0, 0, 255)
+
+    -- Dessiner les catégories principales
     for i, category in ipairs(itemsMenu) do
-        local couleur = {r = 255, g = 255, b = 255}
-        if i == indexSelectionne then
-            couleur = {r = 0, g = 255, b = 0} -- Vert pour l'élément sélectionné
-        end
-        SetTextFont(0)
-        SetTextProportional(1)
-        SetTextScale(0.4, 0.4)
-        SetTextColour(couleur.r, couleur.g, couleur.b, 255)
-        SetTextEntry("STRING")
-        AddTextComponentString(category.name)
-        DrawText(0.03, 0.45 + i * 0.05)
+        local couleur = (i == indexSelectionne) and {r = 0, g = 255, b = 0} or {r = 255, g = 255, b = 255}
+        dessinerTexte(posX, posY + 0.05 + i * 0.05, category.name, 0.4, 0.4, couleur.r, couleur.g, couleur.b, 255)
+    end
+end
 
-        -- Dessiner les sous-options lorsque la catégorie est sélectionnée
-        if i == indexSelectionne then
-            local offsetY = 0.0
-            for j, option in ipairs(category.options) do
-                SetTextColour(255, 255, 255, 255)
-                SetTextEntry("STRING")
-                AddTextComponentString(option)
-                DrawText(0.08, 0.48 + i * 0.05 + offsetY)
-                offsetY = offsetY + 0.04
-            end
-        end
+-- Fonction pour dessiner le sous-menu avec les options
+local function dessinerSousMenu()
+    local category = itemsMenu[indexCategorieSelectionnee]
+    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 0, 0, 0, 150)
+    dessinerCadre(posX, posY, largeurMenu, hauteurMenu, 255, 0, 0, 255) -- Bordure rouge
+
+    dessinerTexte(posX, posY - 0.07, category.name, 0.6, 0.6, 255, 0, 0, 255)
+
+    -- Dessiner les options du sous-menu
+    for i, option in ipairs(category.options) do
+        local couleur = (i == indexSelectionne) and {r = 0, g = 255, b = 0} or {r = 255, g = 255, b = 255}
+        dessinerTexte(posX, posY + 0.05 + i * 0.05, option, 0.4, 0.4, couleur.r, couleur.g, couleur.b, 255)
     end
 end
 
 -- Fonction pour afficher la demande de sélection de touche
 local function afficherDemandeTouche()
-    SetTextFont(0)
-    SetTextProportional(1)
-    SetTextScale(0.5, 0.5)
-    SetTextColour(255, 255, 255, 255)
-    SetTextEntry("STRING")
-    AddTextComponentString("Appuyez sur une touche pour ouvrir/fermer le menu")
-    DrawText(0.25, 0.5)
+    dessinerTexte(0.25, 0.5, "Appuyez sur une touche pour ouvrir/fermer le menu", 0.5, 0.5, 255, 255, 255, 255)
+end
+
+-- Fonction pour déplacer le menu
+local function deplacerMenu()
+    if IsControlPressed(0, 25) then -- Clic droit (contrôle de souris)
+        local sourisX, sourisY = GetCursorPosition()
+        posX = sourisX / GetScreenWidth()
+        posY = sourisY / GetScreenHeight()
+    end
+end
+
+-- Fonction principale de gestion des entrées
+local function gererEntrees()
+    if indexCategorieSelectionnee then
+        -- Navigation des options dans le sous-menu
+        if IsControlJustPressed(0, 172) then -- Flèche haut
+            indexSelectionne = indexSelectionne - 1
+            if indexSelectionne < 1 then indexSelectionne = #itemsMenu[indexCategorieSelectionnee].options end
+        end
+        if IsControlJustPressed(0, 173) then -- Flèche bas
+            indexSelectionne = indexSelectionne + 1
+            if indexSelectionne > #itemsMenu[indexCategorieSelectionnee].options then indexSelectionne = 1 end
+        end
+
+        -- Retour au menu principal avec la touche Supprimer
+        if IsControlJustPressed(0, 178) then -- Touche Supprimer (Delete)
+            indexCategorieSelectionnee = nil
+            indexSelectionne = 1
+        end
+    else
+        -- Navigation dans le menu principal
+        if IsControlJustPressed(0, 172) then -- Flèche haut
+            indexSelectionne = indexSelectionne - 1
+            if indexSelectionne < 1 then indexSelectionne = #itemsMenu end
+        end
+        if IsControlJustPressed(0, 173) then -- Flèche bas
+            indexSelectionne = indexSelectionne + 1
+            if indexSelectionne > #itemsMenu then indexSelectionne = 1 end
+        end
+
+        -- Sélectionner une catégorie
+        if IsControlJustPressed(0, 191) then -- Entrée
+            indexCategorieSelectionnee = indexSelectionne
+            indexSelectionne = 1
+        end
+    end
 end
 
 -- Boucle principale
@@ -95,28 +144,23 @@ Citizen.CreateThread(function()
             end
 
             if menuOuvert then
-                -- Navigation (haut et bas)
-                if IsControlJustPressed(0, 172) then -- Flèche haut
-                    indexSelectionne = indexSelectionne - 1
-                    if indexSelectionne < 1 then indexSelectionne = #itemsMenu end
-                end
-                if IsControlJustPressed(0, 173) then -- Flèche bas
-                    indexSelectionne = indexSelectionne + 1
-                    if indexSelectionne > #itemsMenu then indexSelectionne = 1 end
-                end
+                -- Déplacer le menu avec la souris
+                deplacerMenu()
 
-                -- Valider (Entrée)
-                if IsControlJustPressed(0, 191) then -- Entrée
-                    print("Option sélectionnée : " .. itemsMenu[indexSelectionne].name)
-                    -- Actions à ajouter selon l'option choisie
-                end
+                -- Gérer les entrées utilisateur
+                gererEntrees()
 
-                -- Dessiner le menu
-                dessinerMenu()
+                -- Afficher le menu ou le sous-menu
+                if indexCategorieSelectionnee then
+                    dessinerSousMenu()
+                else
+                    dessinerMenuPrincipal()
+                end
             end
         end
     end
 end)
+
 
 
 
