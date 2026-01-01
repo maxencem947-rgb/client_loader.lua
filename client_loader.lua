@@ -1,4 +1,4 @@
-WarMenu = { }
+WarMenu = {m}
 
 WarMenu.debug = false
 
