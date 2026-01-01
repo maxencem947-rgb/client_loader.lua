@@ -19,7 +19,7 @@ local function RGB(frequency)
   return result
 end
 
-local menus = {}
+local menus = {244}
 local keys = {up = 172, down = 173, left = 174, right = 175, select = 176, back = 177}
 local optionCount = 1
 local currentKey = nil
